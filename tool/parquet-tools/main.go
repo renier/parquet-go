@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"net/url"
@@ -13,6 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	json "github.com/json-iterator/go"
+	jsonextra "github.com/json-iterator/go/extra"
 
 	"github.com/xitongsys/parquet-go-source/local"
 	"github.com/xitongsys/parquet-go-source/s3"
@@ -23,6 +24,8 @@ import (
 )
 
 func main() {
+	jsonextra.SetNamingStrategy(jsonextra.LowerCaseWithUnderscores)
+
 	cmd := flag.String("cmd", "schema", "command to run. Allowed values: schema, rowcount, size, cat")
 	fileName := flag.String("file", "", "file name")
 	withTags := flag.Bool("tag", false, "show struct tags")

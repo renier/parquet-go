@@ -7,6 +7,7 @@ require (
 	github.com/apache/thrift v0.17.0
 	github.com/aws/aws-sdk-go v1.30.19
 	github.com/goccy/go-reflect v1.2.0
+	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.16.7
 	github.com/pierrec/lz4/v4 v4.1.18
 	github.com/stretchr/testify v1.8.4
@@ -19,6 +20,8 @@ require (
 	github.com/google/flatbuffers v23.5.26+incompatible // indirect
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	golang.org/x/mod v0.13.0 // indirect
