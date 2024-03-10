@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"reflect"
 	"strings"
+	"unicode"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -24,7 +26,8 @@ import (
 )
 
 func main() {
-	jsonextra.SetNamingStrategy(jsonextra.LowerCaseWithUnderscores)
+	jsonapi := json.Config{SortMapKeys: true}.Froze()
+	jsonapi.RegisterExtension(&namingStrategyExtension{json.DummyExtension{}, jsonextra.LowerCaseWithUnderscores})
 
 	cmd := flag.String("cmd", "schema", "command to run. Allowed values: schema, rowcount, size, cat")
 	fileName := flag.String("file", "", "file name")
@@ -129,9 +132,23 @@ func main() {
 				os.Exit(1)
 			}
 
-			jsonBs, err := json.Marshal(res)
+			jsonBs, err := jsonapi.Marshal(res)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Can't to json: %s\n", err)
+				os.Exit(1)
+			}
+
+			var rows []map[string]interface{}
+			err = jsonapi.Unmarshal(jsonBs, &rows)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Can't unmarshal: %s\n", err)
+				os.Exit(1)
+			}
+			removeNulls(rows)
+
+			jsonBs, err = jsonapi.Marshal(rows)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Can't do second json pass: %s\n", err)
 				os.Exit(1)
 			}
 
@@ -145,4 +162,57 @@ func main() {
 		os.Exit(1)
 	}
 
+}
+
+func removeNulls(rows []map[string]interface{}) {
+	for _, m := range rows {
+		val := reflect.ValueOf(m)
+		for _, e := range val.MapKeys() {
+			v := val.MapIndex(e)
+			if v.IsNil() {
+				delete(m, e.String())
+				continue
+			}
+			switch t := v.Interface().(type) {
+			case map[string]interface{}:
+				removeNulls([]map[string]interface{}{t})
+			case []map[string]interface{}:
+				removeNulls(t)
+			case []interface{}:
+				for _, i := range t {
+					switch t := i.(type) {
+					case map[string]interface{}:
+						removeNulls([]map[string]interface{}{t})
+					case []map[string]interface{}:
+						removeNulls(t)
+					}
+				}
+			}
+		}
+	}
+}
+
+type namingStrategyExtension struct {
+	json.DummyExtension
+	translate func(string) string
+}
+
+func (extension *namingStrategyExtension) UpdateStructDescriptor(structDescriptor *json.StructDescriptor) {
+	for _, binding := range structDescriptor.Fields {
+		if unicode.IsLower(rune(binding.Field.Name()[0])) || binding.Field.Name()[0] == '_' {
+			continue
+		}
+		tag, hastag := binding.Field.Tag().Lookup("json")
+		if hastag {
+			tagParts := strings.Split(tag, ",")
+			if tagParts[0] == "-" {
+				continue // hidden field
+			}
+			if tagParts[0] != "" {
+				continue // field explicitly named
+			}
+		}
+		binding.ToNames = []string{extension.translate(binding.Field.Name())}
+		binding.FromNames = []string{extension.translate(binding.Field.Name())}
+	}
 }
