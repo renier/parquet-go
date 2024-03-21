@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	json "github.com/json-iterator/go"
-	jsonextra "github.com/json-iterator/go/extra"
 
 	"github.com/xitongsys/parquet-go-source/local"
 	"github.com/xitongsys/parquet-go-source/s3"
@@ -27,7 +26,7 @@ import (
 
 func main() {
 	jsonapi := json.Config{SortMapKeys: true}.Froze()
-	jsonapi.RegisterExtension(&namingStrategyExtension{json.DummyExtension{}, jsonextra.LowerCaseWithUnderscores})
+	jsonapi.RegisterExtension(&namingStrategyExtension{json.DummyExtension{}, LowerCaseFirstRune})
 
 	cmd := flag.String("cmd", "schema", "command to run. Allowed values: schema, rowcount, size, cat")
 	fileName := flag.String("file", "", "file name")
@@ -215,4 +214,16 @@ func (extension *namingStrategyExtension) UpdateStructDescriptor(structDescripto
 		binding.ToNames = []string{extension.translate(binding.Field.Name())}
 		binding.FromNames = []string{extension.translate(binding.Field.Name())}
 	}
+}
+
+func LowerCaseFirstRune(name string) string {
+	newName := []rune{}
+	for i, c := range name {
+		if i == 0 {
+			newName = append(newName, unicode.ToLower(c))
+		} else {
+			newName = append(newName, c)
+		}
+	}
+	return string(newName)
 }
